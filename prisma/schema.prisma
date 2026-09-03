@@ -1,0 +1,376 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  TRADER
+  ADVISOR
+  ADMIN
+}
+
+enum ImportStatus {
+  UPLOADED
+  QUEUED
+  PROCESSING
+  NEEDS_MAPPING
+  READY
+  COMMITTED
+  FAILED
+}
+
+enum DataQuality {
+  COMPLETE
+  LIMITED
+  REJECTED
+}
+
+enum CapitalKind {
+  STARTING
+  DEPOSIT
+  WITHDRAWAL
+  ADJUSTMENT
+}
+
+model User {
+  id              String               @id @default(cuid())
+  name            String?
+  email           String               @unique
+  emailVerified   DateTime?
+  image           String?
+  passwordHash    String?
+  role            Role                 @default(TRADER)
+  profile         UserProfile?
+  authAccounts    Account[]
+  sessions        Session[]
+  tradingAccounts TradingAccount[]
+  trades          Trade[]
+  statements      UploadedStatement[]
+  capital         CapitalTransaction[]
+  riskConfig      RiskConfiguration?
+  auditLogs       AuditLog[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model UserProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country         String
+  baseCurrency    String    @default("INR")
+  primaryMarket   String?
+  experienceLevel String?
+  tradingStyle    String?
+  yearPreference  String    @default("INDIAN_FINANCIAL_YEAR")
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Broker {
+  id        String                 @id @default(cuid())
+  slug      String                 @unique
+  name      String
+  active    Boolean                @default(true)
+  accounts  TradingAccount[]
+  templates BrokerImportTemplate[]
+}
+
+model TradingAccount {
+  id              String              @id @default(cuid())
+  userId          String
+  brokerId        String?
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  broker          Broker?             @relation(fields: [brokerId], references: [id])
+  name            String
+  maskedAccountId String?
+  trades          Trade[]
+  statements      UploadedStatement[]
+  createdAt       DateTime            @default(now())
+
+  @@index([userId])
+}
+
+model BrokerImportTemplate {
+  id       String  @id @default(cuid())
+  brokerId String
+  broker   Broker  @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  name     String
+  version  Int     @default(1)
+  rules    Json
+  active   Boolean @default(true)
+
+  @@unique([brokerId, name, version])
+}
+
+model UploadedStatement {
+  id           String         @id @default(cuid())
+  userId       String
+  accountId    String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      TradingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  objectKey    String         @unique
+  originalName String
+  contentType  String
+  sizeBytes    Int
+  sha256       String
+  status       ImportStatus   @default(UPLOADED)
+  deleteAfter  DateTime?
+  jobs         ImportJob[]
+  createdAt    DateTime       @default(now())
+
+  @@unique([userId, sha256])
+  @@index([userId, createdAt])
+}
+
+model ImportJob {
+  id                String            @id @default(cuid())
+  statementId       String
+  statement         UploadedStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  status            ImportStatus      @default(QUEUED)
+  detectedBroker    String?
+  detectedSheets    Json?
+  importedRows      Int               @default(0)
+  rejectedRows      Int               @default(0)
+  duplicateRows     Int               @default(0)
+  brokerReportedNet Decimal?          @db.Decimal(20, 4)
+  calculatedNet     Decimal?          @db.Decimal(20, 4)
+  mapping           Json?
+  errors            ImportError[]
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime          @default(now())
+}
+
+model ImportError {
+  id              String    @id @default(cuid())
+  importJobId     String
+  job             ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  sheet           String?
+  rowNumber       Int?
+  code            String
+  message         String
+  redactedContext Json?
+  createdAt       DateTime  @default(now())
+}
+
+model Strategy {
+  id     String  @id @default(cuid())
+  userId String
+  name   String
+  trades Trade[]
+
+  @@unique([userId, name])
+}
+
+model Trade {
+  id                String           @id @default(cuid())
+  userId            String
+  accountId         String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account           TradingAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  symbol            String
+  underlying        String?
+  exchange          String
+  segment           String
+  instrumentType    String
+  optionType        String?
+  strikePrice       Decimal?         @db.Decimal(20, 4)
+  expiryDate        DateTime?
+  direction         String
+  quantity          Decimal          @db.Decimal(20, 4)
+  lotSize           Decimal?         @db.Decimal(20, 4)
+  entryDateTime     DateTime?
+  exitDateTime      DateTime?
+  averageEntryPrice Decimal?         @db.Decimal(20, 4)
+  averageExitPrice  Decimal?         @db.Decimal(20, 4)
+  grossPnl          Decimal          @db.Decimal(20, 4)
+  totalCharges      Decimal          @db.Decimal(20, 4)
+  netPnl            Decimal          @db.Decimal(20, 4)
+  strategyId        String?
+  strategy          Strategy?        @relation(fields: [strategyId], references: [id])
+  importSource      String
+  sourceFingerprint String
+  dataQuality       DataQuality
+  executions        TradeExecution[]
+  charges           TradingCharge[]
+  journals          JournalEntry[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([userId, sourceFingerprint])
+  @@index([userId, exitDateTime])
+  @@index([accountId, symbol])
+}
+
+model TradeExecution {
+  id            String   @id @default(cuid())
+  tradeId       String
+  trade         Trade    @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  executedAt    DateTime
+  side          String
+  quantity      Decimal  @db.Decimal(20, 4)
+  price         Decimal  @db.Decimal(20, 4)
+  orderId       String?
+  brokerTradeId String?
+}
+
+model TradingCharge {
+  id      String  @id @default(cuid())
+  tradeId String
+  trade   Trade   @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  type    String
+  amount  Decimal @db.Decimal(20, 4)
+}
+
+model CapitalTransaction {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  effectiveAt DateTime
+  kind        CapitalKind
+  amount      Decimal     @db.Decimal(20, 4)
+  note        String?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId, effectiveAt])
+}
+
+model JournalEntry {
+  id              String   @id @default(cuid())
+  userId          String
+  tradeId         String?
+  trade           Trade?   @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+  setup           String?
+  entryReason     String?
+  exitReason      String?
+  plannedStop     Decimal? @db.Decimal(20, 4)
+  plannedTarget   Decimal? @db.Decimal(20, 4)
+  plannedRisk     Decimal? @db.Decimal(20, 4)
+  actualRisk      Decimal? @db.Decimal(20, 4)
+  emotionBefore   String?
+  emotionAfter    String?
+  mistakeCategory String?
+  lesson          String?
+  ruleStatus      String?
+  confidence      Int?
+  tags            Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model RiskConfiguration {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  maxRiskPerTrade         Decimal? @db.Decimal(20, 4)
+  maxDailyLoss            Decimal? @db.Decimal(20, 4)
+  maxWeeklyLoss           Decimal? @db.Decimal(20, 4)
+  maxMonthlyDrawdownPct   Decimal? @db.Decimal(10, 4)
+  maxPortfolioDrawdownPct Decimal? @db.Decimal(10, 4)
+  maxTradesPerDay         Int?
+  maxConsecutiveLosses    Int?
+  coolOffMinutes          Int?
+  weights                 Json
+  updatedAt               DateTime @updatedAt
+}
+
+model RiskAlert {
+  id             String    @id @default(cuid())
+  userId         String
+  type           String
+  severity       String
+  message        String
+  evidence       Json
+  observedAt     DateTime  @default(now())
+  acknowledgedAt DateTime?
+
+  @@index([userId, observedAt])
+}
+
+model PerformanceSnapshot {
+  id          String   @id @default(cuid())
+  userId      String
+  accountId   String?
+  periodStart DateTime
+  periodEnd   DateTime
+  filters     Json
+  metrics     Json
+  createdAt   DateTime @default(now())
+
+  @@index([userId, periodEnd])
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  plan        String
+  status      String
+  providerRef String?
+  renewsAt    DateTime?
+}
+
+model SharedReport {
+  id        String    @id @default(cuid())
+  ownerId   String
+  advisorId String?
+  tokenHash String    @unique
+  filters   Json
+  expiresAt DateTime
+  revokedAt DateTime?
+}
+
+model AuditLog {
+  id               String   @id @default(cuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action           String
+  entityType       String
+  entityId         String?
+  ipHash           String?
+  metadataRedacted Json?
+  createdAt        DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+

@@ -1,0 +1,2 @@
+import{NextResponse}from"next/server";import{requireUser}from"@/lib/require-user";import{db}from"@/lib/db";export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){const user=await requireUser(),{id}=await params;const job=await db.importJob.findFirst({where:{id,statement:{userId:user.id}},include:{errors:{take:100}}});return job?NextResponse.json(job):NextResponse.json({code:"NOT_FOUND"},{status:404})}
+

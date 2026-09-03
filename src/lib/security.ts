@@ -1,0 +1,2 @@
+import{createHash,randomUUID}from"node:crypto";export const sha256=(v:string|Buffer)=>createHash("sha256").update(v).digest("hex");export const objectKey=(userId:string,fileName:string)=>{const safe=fileName.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-100);return`users/${sha256(userId).slice(0,24)}/${new Date().toISOString().slice(0,10)}/${randomUUID()}-${safe}`};export const allowedMime=new Set(["text/csv","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/pdf"]);
+
