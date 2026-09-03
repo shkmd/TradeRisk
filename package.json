@@ -1,6 +1,65 @@
 {
-  "name":"traderisk-analytics-saas","version":"1.0.0","private":true,"scripts":{"dev":"next dev","build":"prisma generate && next build","start":"next start","lint":"eslint .","test":"vitest run","worker":"tsx src/worker.ts","db:generate":"prisma generate","db:migrate":"prisma migrate deploy","db:seed":"tsx prisma/seed.ts"},
-  "dependencies":{"@auth/prisma-adapter":"latest","@aws-sdk/client-s3":"latest","@aws-sdk/s3-request-presigner":"latest","@hookform/resolvers":"latest","@prisma/adapter-pg":"7.10.0","@prisma/client":"7.10.0","argon2":"latest","bullmq":"latest","decimal.js":"latest","ioredis":"latest","lucide-react":"latest","next":"16.3.4","next-auth":"beta","papaparse":"latest","pg":"latest","react":"latest","react-dom":"latest","react-hook-form":"latest","recharts":"latest","xlsx":"latest","zod":"latest"},
-  "devDependencies":{"@tailwindcss/postcss":"latest","@types/node":"latest","@types/papaparse":"latest","@types/pg":"latest","@types/react":"latest","@types/react-dom":"latest","eslint":"^9.0.0","eslint-config-next":"16.3.4","prisma":"7.10.0","tailwindcss":"latest","tsx":"latest","typescript":"latest","vitest":"latest"},"packageManager":"pnpm@11.19.0"
+  "name": "traderisk-analytics-saas",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "worker": "tsx src/worker.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "latest",
+    "@aws-sdk/client-s3": "latest",
+    "@aws-sdk/s3-request-presigner": "latest",
+    "@hookform/resolvers": "latest",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "argon2": "latest",
+    "bullmq": "latest",
+    "decimal.js": "latest",
+    "ioredis": "latest",
+    "lucide-react": "latest",
+    "next": "16.3.4",
+    "next-auth": "beta",
+    "papaparse": "latest",
+    "pg": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-hook-form": "latest",
+    "recharts": "latest",
+    "xlsx": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/papaparse": "latest",
+    "@types/pg": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.3.4",
+    "prisma": "7.10.0",
+    "tailwindcss": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "argon2",
+      "esbuild",
+      "msgpackr-extract",
+      "prisma",
+      "unrs-resolver"
+    ]
+  },
+  "packageManager": "pnpm@11.19.0"
 }
-
